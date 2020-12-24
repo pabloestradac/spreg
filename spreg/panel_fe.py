@@ -43,7 +43,7 @@ class BasePanel_FE_Lag(RegressionPropsY, RegressionPropsVM):
     w         : pysal W object
                 Spatial weights matrix
     epsilon   : float
-                tolerance criterion in mimimize_scalar function and
+                tolerance criterion in minimize_scalar function and
                 inverse_product
 
     Attributes
@@ -86,7 +86,7 @@ class BasePanel_FE_Lag(RegressionPropsY, RegressionPropsVM):
                    prediction errors using reduced form predicted values
     """
 
-    def __init__(self, y, x, w, epsilon=0.0000001):
+    def __init__(self, y, x, w, epsilon=0.0000001, bc=False):
         # set up main regression variables and spatial filters
         self.n = w.n
         self.t = y.shape[0] // self.n
@@ -139,7 +139,11 @@ class BasePanel_FE_Lag(RegressionPropsY, RegressionPropsVM):
 
         # residual variance
         self._cache = {}
-        self.sig2 = spdot(self.u.T, self.u) / (self.n * self.t)
+        if bc:
+            c = self.t / (self.t - 1)
+            self.sig2 = c * spdot(self.u.T, self.u) / (self.n * self.t)
+        else:
+            self.sig2 = spdot(self.u.T, self.u) / (self.n * self.t)
 
         # information matrix
         a = -self.rho * W
@@ -296,7 +300,7 @@ class Panel_FE_Lag(BasePanel_FE_Lag):
            [ 0.1903]])
     """
 
-    def __init__(self, y, x, w, epsilon=0.0000001,
+    def __init__(self, y, x, w, epsilon=0.0000001, bias_correct=False,
                  vm=False, name_y=None, name_x=None,
                  name_w=None, name_ds=None):
         n_rows = USER.check_arrays(y, x)
@@ -308,7 +312,7 @@ class Panel_FE_Lag(BasePanel_FE_Lag):
         USER.check_weights(w, bigy, w_required=True, time=True)
 
         BasePanel_FE_Lag.__init__(
-            self, bigy, bigx, w, epsilon=epsilon)
+            self, bigy, bigx, w, epsilon=epsilon, bc=bias_correct)
         # increase by 1 to have correct aic and sc, include rho in count
         self.k += 1
         self.title = "MAXIMUM LIKELIHOOD SPATIAL LAG PANEL" + \
